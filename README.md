@@ -17,8 +17,8 @@ e.get # run exe again (cache is timed out)
 e.update # run exe and update cache NOW!
 ```
 
-If one exe is running another instance on the
-same Exedb will wait for it.
+If another program is running another instance on the
+same Exedb it will wait for first one finish.
 
 
 Methods and constants
@@ -28,8 +28,8 @@ Methods and constants
 - ::DEF_DIR - default dir for cache files
 - ::DEF_CACHE_TIMEOUT - default cache timeout
 
-- #get - get exe output
-- #update - run exe anyway, return output
+- \#get - get exe output
+- \#update - run exe anyway, return output
 
 Accessors
 --------
