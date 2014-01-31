@@ -10,12 +10,12 @@ class Exedb
   attr_accessor :cache_timeout, :cache_dir
   attr_reader :update_time
 
-  def initialize(str=nil)
+  def initialize(str='')
     @update_time=Time.parse("1970-01-01")
     @cache_timeout=DEF_CACHE_TIMEOUT
     @cache_dir=DEF_DIR
     Dir.mkdir DEF_DIR unless File.directory? DEF_DIR
-    update_method=str
+    self.update_method=(str)
   end
 
   def generate_key u
@@ -38,10 +38,11 @@ class Exedb
     @content
   end
 
-  def update_method= str
+  def update_method=(str)
     @update_method=str
     @key=generate_key str
-    @path=File.join DEF_DIR, @key
+    @path=File.join(DEF_DIR, @key)
+#    warn "key=#{@key}; path=#{@path}; u=#{str}"
   end
 
   def read_cache
