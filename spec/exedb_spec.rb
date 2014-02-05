@@ -73,4 +73,25 @@ describe Exedb do
     end
   end
 
+  describe 'return code' do
+    it 'can be read' do
+      @db.code.must_be :==, 0
+    end
+
+    it 'must be -1 if command cannnot be ran' do
+      @db=Exedb.new
+      @db.code.must_be :==, -1
+    end
+
+    it 'must read cached value' do
+      @db=Exedb.new('x=`cat /tmp/mytestcode`; echo ">>$x<<"; exit $x')
+      @db2=Exedb.new('x=`cat /tmp/mytestcode`; echo ">>$x<<"; exit $x')
+      File.open("/tmp/mytestcode",'w'){|f| f.puts '1'}
+      @db.code
+      File.open("/tmp/mytestcode",'w'){|f| f.puts '2'}
+      @db2.update
+
+      @db.code.must_be :==, 2
+    end
+  end
 end
