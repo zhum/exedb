@@ -41,10 +41,16 @@ class Exedb
   # the same command is in progress, no new execution
   # will be started
   def update
+    @content=''
     File.open(@path, File::RDWR|File::CREAT, 0644) { |file|
       if file.flock(File::LOCK_EX|File::LOCK_NB)
         begin
-          @content=`#{@update_method}`
+          popen(@update_method){|pipe|
+            while line=pipe.gets
+              file.puts line
+              @content = @content+line
+            end
+          }
           @code=$?.exitstatus
           #warn "UPDATED: #{@content}"
         rescue
@@ -99,6 +105,19 @@ class Exedb
     actualize
     @code
   end
+
+  #
+  # Do not execute command - just peek in cache file...
+  # Usefull for intermediate command output peeking
+  #
+  def peek
+    begin
+      File.read(@path)      
+    rescue
+      ''
+    end
+  end
+
   #
   # Returns symbol of cache state:
   # - updated = actual

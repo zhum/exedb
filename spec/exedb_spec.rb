@@ -94,4 +94,19 @@ describe Exedb do
       @db.code.must_be :==, 2
     end
   end
+
+  describe 'intermediate output' do
+    it 'cam be read while command is in progress' do
+      CMD4='for i in 1 2 3 4; do sleep 1; echo x; done'
+      @db=Exedb.new(CMD4)
+      @db2=Exedb.new(CMD4)
+      t=Thread.new {
+        @db.get
+      }
+      sleep 2
+      x=@db2.peek
+      x.must_match /^xx(x?)$/
+      t.join
+    end
+  end
 end
