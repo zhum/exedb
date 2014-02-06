@@ -45,14 +45,17 @@ class Exedb
     File.open(@path, File::RDWR|File::CREAT, 0644) { |file|
       if file.flock(File::LOCK_EX|File::LOCK_NB)
         begin
-          popen(@update_method){|pipe|
-            while line=pipe.gets
+          IO.popen(@update_method){|pipe|
+            line=pipe.gets
+            while line
               file.puts line
+              file.flush
               @content = @content+line
+              line=pipe.gets
             end
           }
           @code=$?.exitstatus
-          #warn "UPDATED: #{@content}"
+          #warn "UPDATED: #{@content}/#{@code}"
         rescue
           @content=''
           @code=-1
@@ -64,6 +67,7 @@ class Exedb
         }
         file.flock(File::LOCK_UN)
       else
+        warn "CANNOT LOCK"
         read_cache
       end
       @update_time=Time.now

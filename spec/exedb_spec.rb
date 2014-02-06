@@ -97,15 +97,15 @@ describe Exedb do
 
   describe 'intermediate output' do
     it 'cam be read while command is in progress' do
-      CMD4='for i in 1 2 3 4; do sleep 1; echo x; done'
+      CMD4='for i in 1 2 3 4; do echo x; sleep 1; done'
       @db=Exedb.new(CMD4)
       @db2=Exedb.new(CMD4)
       t=Thread.new {
         @db.get
       }
-      sleep 2
+      sleep 3
       x=@db2.peek
-      x.must_match /^xx(x?)$/
+      x.must_match /^x\nx(\nx?)$/m
       t.join
     end
   end
