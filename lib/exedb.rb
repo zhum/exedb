@@ -48,9 +48,12 @@ class Exedb
           IO.popen(@update_method){|pipe|
             line=pipe.gets
             while line
-              file.puts line
-              file.flush
-              @content = @content+line
+              line=@transform.call(line) if @transform
+              if line
+                file.puts line
+                file.flush
+                @content = @content+line
+              end
               line=pipe.gets
             end
           }
@@ -60,6 +63,7 @@ class Exedb
           @content=''
           @code=-1
         end
+        @content=@alltransform.call(@content,@code) if @alltransform
         file.write @content
         file.flush
         File.open("#{@path}.code",File::RDWR|File::CREAT, 0644){|code_file|
@@ -76,6 +80,45 @@ class Exedb
     @content
   end
 
+  #
+  # transform each line in command output
+  # if nil is returned, line is skipped
+  #
+  def line_transform(&block)
+    if block
+      obj = Object.new
+      obj.define_singleton_method(:_, &block)
+      @transform=obj.method(:_).to_proc
+    else
+      @transform=nil
+    end
+  end
+
+  #
+  # cancel transformation each line
+  #
+  def no_line_transform
+    @transform=nil    
+  end
+
+  #
+  # transform all command output at end of execution
+  # block is called with parameters: content, return code
+  # returned content replaces original output
+  #
+  def all_transform(&block)
+    if block
+      obj = Object.new
+      obj.define_singleton_method(:_, &block)
+      @alltransform=obj.method(:_).to_proc
+    else
+      @alltransform=nil
+    end
+  end
+
+  def no_all_transform
+    @alltransform=nil
+  end
   #
   # Replace executing command
   #
@@ -178,4 +221,5 @@ protected
       file.flock(File::LOCK_UN)
     }
   end
+
 end

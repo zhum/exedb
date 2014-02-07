@@ -45,7 +45,6 @@ describe Exedb do
 
   describe 'parallel istances' do
     before do
-      #!!!warn "BEFORE 2>>>>>>>"
       @db2=Exedb.new
       @db2.update_method="sleep 1;ls -la #{TEST_DIR}"
       @db.update
@@ -53,7 +52,6 @@ describe Exedb do
 
     it 'reads last cached result' do
       sleep 2;
-      #!!!warn ">>>>>>>>>>>>>>>>>>"
       @db2.get.must_match TEST_FILE
     end
 
@@ -107,6 +105,44 @@ describe Exedb do
       x=@db2.peek
       x.must_match /^x\nx(\nx?)$/m
       t.join
+    end
+  end
+
+  describe "transforms output" do
+    before do
+      @db.line_transform do |str|
+        return nil unless str =~ /^([d-])/
+        type=$1
+        str =~ /(\S+)$/
+        prefix= type=='-' ? 'FILE: ' : 'DIR:  '
+        return "#{prefix}#{$1}"
+      end
+    end
+
+    it 'transforms output' do
+      @db.get.must_match 'FILE: abc_file'
+    end
+
+    it 'deletes lines in output' do
+      x=@db.get
+      x.lines.count.must_equal 1
+    end
+
+    it 'cancels transformation' do
+      @db.no_line_transform
+      x=@db.get
+      x.lines.count.must_equal 4
+    end
+
+    it 'transforms each line and all output' do
+      @db.all_transform {|str,code| n=str.lines.count; "#{n} lines (#{code})"}
+      @db.get.must_equal "1 lines (0)"
+    end
+
+    it 'transforms all raw output' do
+      @db.no_line_transform
+      @db.all_transform {|str,code| n=str.lines.count; "#{n} lines (#{code})"}
+      @db.get.must_equal "4 lines (0)"
     end
   end
 end
