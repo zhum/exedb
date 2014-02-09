@@ -217,7 +217,7 @@ protected
     f=u.tr('^qwertyuiopasdfghjklzxcvbnm_-','')
     d=Digest::SHA256.hexdigest(u)
     return f[0,60]+'..'+f[-60,60]+d if f.size>128
-    return f+d
+#    return f+d
   end
 
   def read_cache
@@ -225,11 +225,15 @@ protected
       file.flock(File::LOCK_EX)
       @content=file.read
       warn "CACHE READ: #{@content}"
-      File.open("#{@path}.code", File::RDONLY) { |code_file|
-        c=code_file.gets
-        c =~ /([0-9-]+)/
-        @code=$1.to_i
-      }
+      begin
+        File.open("#{@path}.code", File::RDONLY) { |code_file|
+          c=code_file.gets
+          c =~ /([0-9-]+)/
+          @code=$1.to_i
+        }
+        rescue
+          @code=-1
+        end
       file.flock(File::LOCK_UN)
     }
   end
