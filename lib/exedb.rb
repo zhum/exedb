@@ -16,13 +16,36 @@ require 'time'
 #
 # Exit code is available via 'code' method
 #
+# Example:
+#    d=Exedb.new("ls -la .")
+#    d.cache_timeout=5  # 5 seconds for cache expire
+#    list=d.get    # execute 'ls' and get list of files
+#    list=d.get    # just get list again (cached)
+#    sleep 5
+#    list=d.get    # execute 'ls' again and get result
+#    list=d.update # force 'ls' execution!
+#    d.line_transform {|l|
+#      if l =~ /^d.*(\S+)$/
+#         return "DIR: $1"   # not correct, do not use in production :)
+#      elsif l =~ /^-.*(\S+)$/
+#         return "FILE: $1"  # just transform example
+#      else
+#         return nil         # skip this line
+#      end
+#    }
+#    d.update   # get list of directories and files in special format
+#
 class Exedb
 
   SLEEP_TIME=1
   DEF_DIR='/tmp/Exedb'
   DEF_CACHE_TIMEOUT=60
 
-  attr_accessor :cache_timeout, :cache_dir
+  # directory for cache files
+  attr_accessor :cache_dir
+  # default cache timeout
+  attr_accessor :cache_timeout
+  # last cache update time
   attr_reader :update_time
 
   # Constructor
@@ -92,6 +115,10 @@ class Exedb
   # transform each line in command output
   # if nil is returned, line is skipped
   #
+  # Example:
+  #    @d.line_transform {|str|
+  #       str.downcase
+  #    }
   def line_transform(&block)
     if block
       obj = Object.new
@@ -114,6 +141,10 @@ class Exedb
   # block is called with parameters: content, return code
   # returned content replaces original output
   #
+  # Example:
+  #    @d.all_transform {|str,code|
+  #       "Total: #{str.lines.count} lines\nExit code: #{code}"
+  #    }
   def all_transform(&block)
     if block
       obj = Object.new
@@ -124,6 +155,9 @@ class Exedb
     end
   end
 
+  #
+  # cancel transformation of full output
+  #
   def no_all_transform
     @alltransform=nil
   end
@@ -175,9 +209,9 @@ class Exedb
 
   #
   # Returns symbol of cache state:
-  # - updated = actual
-  # - need_update = new command execution needed
-  # - need_reread = just cache file reread is neede
+  # - :updated = actual
+  # - :need_update = new command execution needed
+  # - :need_reread = just cache file reread is neede
   #
   def cache_state
     if File.exists? @path
@@ -217,14 +251,14 @@ protected
     f=u.tr('^qwertyuiopasdfghjklzxcvbnm_-','')
     d=Digest::SHA256.hexdigest(u)
     return f[0,60]+'..'+f[-60,60]+d if f.size>128
-#    return f+d
+    return f+d
   end
 
   def read_cache
     File.open(@path, File::RDONLY) { |file|
       file.flock(File::LOCK_EX)
       @content=file.read
-      warn "CACHE READ: #{@content}"
+#      warn "CACHE READ: #{@content}"
       begin
         File.open("#{@path}.code", File::RDONLY) { |code_file|
           c=code_file.gets

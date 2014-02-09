@@ -2,6 +2,7 @@ require 'minitest/autorun'
 require "exedb"
 
 TEST_DIR='/tmp/exedb_test'
+TEST_CACHE_DIR='/tmp/exedb_test_cache'
 TEST_FILE='abc_file'
 TEST_FILE2='efg_file'
 
@@ -11,6 +12,7 @@ describe Exedb do
     FileUtils.rm_rf Exedb::DEF_DIR
 
     @db=Exedb.new
+    @db.cache_dir=TEST_CACHE_DIR
     FileUtils.rm_rf TEST_DIR
     Dir.mkdir TEST_DIR
     File.open(File.join(TEST_DIR,TEST_FILE), "w") { |io| io.puts "ok" }
@@ -46,6 +48,7 @@ describe Exedb do
   describe 'parallel istances' do
     before do
       @db2=Exedb.new
+      @db2.cache_dir=TEST_CACHE_DIR
       @db2.update_method="sleep 1;ls -la #{TEST_DIR}"
       @db.update
     end
@@ -84,6 +87,8 @@ describe Exedb do
     it 'must read cached value' do
       @db=Exedb.new('x=`cat /tmp/mytestcode`; echo ">>$x<<"; exit $x')
       @db2=Exedb.new('x=`cat /tmp/mytestcode`; echo ">>$x<<"; exit $x')
+      @db.cache_dir=TEST_CACHE_DIR
+      @db2.cache_dir=TEST_CACHE_DIR
       File.open("/tmp/mytestcode",'w'){|f| f.puts '1'}
       @db.code
       File.open("/tmp/mytestcode",'w'){|f| f.puts '2'}
@@ -98,6 +103,8 @@ describe Exedb do
       CMD4='for i in 1 2 3 4; do echo x; sleep 1; done'
       @db=Exedb.new(CMD4)
       @db2=Exedb.new(CMD4)
+      @db.cache_dir=TEST_CACHE_DIR
+      @db2.cache_dir=TEST_CACHE_DIR
       t=Thread.new {
         @db.get
       }
