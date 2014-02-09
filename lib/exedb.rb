@@ -42,7 +42,13 @@ class Exedb
   # will be started
   def update
     @content=''
-    File.open(@path, File::RDWR|File::CREAT, 0644) { |file|
+
+    # create file if needed
+    unless File.file?(@path)
+      File.open(@path,File::RDWR|File::CREAT,0644){|f|}
+    end
+
+    File.open(@path, "r+:UTF-8") { |file|
       if file.flock(File::LOCK_EX|File::LOCK_NB)
         begin
           IO.popen(@update_method){|pipe|
@@ -58,20 +64,22 @@ class Exedb
             end
           }
           @code=$?.exitstatus
-          #warn "UPDATED: #{@content}/#{@code}"
         rescue
           @content=''
           @code=-1
         end
-        @content=@alltransform.call(@content,@code) if @alltransform
-        file.write @content
-        file.flush
+        if @alltransform
+          @content=@alltransform.call(@content,@code)
+          file.seek(0,IO::SEEK_SET)
+          file.write @content
+          file.truncate(@content.size)
+          file.flush
+        end
         File.open("#{@path}.code",File::RDWR|File::CREAT, 0644){|code_file|
           code_file.puts @code
         }
         file.flock(File::LOCK_UN)
       else
-        warn "CANNOT LOCK"
         read_cache
       end
       @update_time=Time.now
@@ -206,13 +214,17 @@ protected
   end
 
   def generate_key u
-    return Digest::SHA256.hexdigest u
+    f=u.tr('^qwertyuiopasdfghjklzxcvbnm_-','')
+    d=Digest::SHA256.hexdigest(u)
+    return f[0,60]+'..'+f[-60,60]+d if f.size>128
+    return f+d
   end
 
   def read_cache
     File.open(@path, File::RDONLY) { |file|
       file.flock(File::LOCK_EX)
       @content=file.read
+      warn "CACHE READ: #{@content}"
       File.open("#{@path}.code", File::RDONLY) { |code_file|
         c=code_file.gets
         c =~ /([0-9-]+)/
